@@ -45,6 +45,8 @@ def download_audio(audio_url, code):
         output.write(con.read())
 
 def write_transcript(name, data):
+    data = "<html><body>{}</body></html>".format(data)
+
     with open(name, "w") as file:
         file.write(data)
 
