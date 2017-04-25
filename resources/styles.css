@@ -1,0 +1,7 @@
+@font-face {
+  font-family: GauraTimes; /* Имя шрифта */
+  src: url(gtr.ttf); /* Путь к файлу со шрифтом */
+}
+body {
+  font-family: GauraTimes;
+}

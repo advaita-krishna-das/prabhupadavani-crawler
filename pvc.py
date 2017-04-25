@@ -1,7 +1,10 @@
 from bs4 import BeautifulSoup
 from urllib.request import urlopen, Request
+from os.path import exists, join
+from os import makedirs
 
 def get_info(url):
+    print("PRC: ", url)
     r = Request(url, headers={'User-Agent' : "Magic Browser"})
     f = urlopen(r)
     s = BeautifulSoup(f, "html5lib")
@@ -29,6 +32,7 @@ def get_info(url):
 
     return ({
         "code": code,
+        "title": title,
         "date": date,
         "location": location,
         "category": category,
@@ -36,26 +40,67 @@ def get_info(url):
         "audio_url": audio_url
     }, next_url)
 
-def download_audio(audio_url, code):
-    print(audio_url)
-    # Download audio file
+def download_audio(info, path):
+    if "audio_url" not in info:
+        return
+    if info["audio_url"] is None:
+        return
+    print("AUD: ", info["audio_url"])
+    audio_url = info["audio_url"]
+    audio_path = join(path, info["code"] + ".mp3")
     req = Request(audio_url, headers={'User-Agent' : "Magic Browser"})
     con = urlopen(req)
-    with open(code + ".mp3","wb") as output:
+    with open(audio_path, "wb") as output:
         output.write(con.read())
 
-def write_transcript(name, data):
-    data = "<html><body>{}</body></html>".format(data)
+def write_transcript(info, path):
+    data = "<!DOCTYPE html><html><head><meta charset='utf-8'>"+\
+        "<link rel='stylesheet' href='styles.css'>"+\
+        "<script src='scripts.js'></script>"+\
+        "</head><body><h1>{}</h1><div>{}</div><div>{}</div>{}</body></html>"\
+        .format(info["title"], info["date"], info["location"], info["content"])
 
-    with open(name, "w") as file:
+    filename = join(path, info["code"] + ".html")
+    with open(filename, "w") as file:
         file.write(data)
 
-domain = "https://prabhupadavani.org"
-url = "/transcriptions/660304bgny/"
+def get_start_code(path, default=None):
+    result = default or ""
+    if exists(path):
+        with open(path, "r") as file:
+            result = file.read()
+        print("Continuing from: {}".format(result))
+    return result
 
+def get_dir(info, create=False, root=None):
+    code = info["code"]
+    year = code[0:2]
+    month = code[2:4]
+    path = ""
+    if root:
+        path = root
+    path = join(path, year, month)
+
+    if not exists(path) and create:
+        print("FLD: ", path)
+        makedirs(path)
+
+    return path
+
+# Configuration
+res_path = "resources"
+dwn_path = "downloads"
+last_path = join(dwn_path, "last.txt")
+domain = "https://prabhupadavani.org/"
+start_code = get_start_code(last_path, default="660304bgny")
+
+url = "transcriptions/{}".format(start_code)
 while url is not None:
     info, url = get_info(domain + url)
-    write_transcript(info["code"]+".html", info["content"])
-    if info["audio_url"]:
-        download_audio(info["audio_url"], info["code"])
-    print(info["code"])
+
+    path = get_dir(info, create=True, root=dwn_path)
+    write_transcript(info, path)
+    download_audio(info, path)
+
+    with open(last_path, "w") as file:
+        file.write(info["code"].lower().replace(".", ""))
