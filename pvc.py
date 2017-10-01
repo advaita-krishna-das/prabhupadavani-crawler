@@ -3,6 +3,7 @@ from urllib.request import urlopen, Request
 from os.path import exists, join
 from os import makedirs
 
+
 def get_transcriptions_list(page):
     result = []
     url = "https://prabhupadavani.org/transcriptions/?page={}".format(page)
@@ -16,6 +17,7 @@ def get_transcriptions_list(page):
         result.append(href)
 
     return result
+
 
 def get_info(url):
     print("PAGE: ", url)
@@ -50,6 +52,7 @@ def get_info(url):
         "content": content,
         "audio_url": audio_url }
 
+
 def download_audio(info, path):
     if "audio_url" not in info:
         return
@@ -64,10 +67,11 @@ def download_audio(info, path):
     else:
         print("AUD : ", info["audio_url"])
 
-    req = Request(audio_url, headers={'User-Agent' : "Magic Browser"})
+    req = Request(audio_url, headers={'User-Agent': "Magic Browser"})
     con = urlopen(req)
     with open(audio_path, "wb") as output:
         output.write(con.read())
+
 
 def write_transcript(info, path):
     data = "<!DOCTYPE html><html><head><meta charset='utf-8'>"+\
@@ -80,6 +84,7 @@ def write_transcript(info, path):
     with open(filename, "w") as file:
         file.write(data)
 
+
 def get_start_code(path, default=None):
     result = default or ""
     if exists(path):
@@ -88,7 +93,8 @@ def get_start_code(path, default=None):
         print("Continuing from: {}".format(result))
     return result
 
-def get_dir(info, create=False, root=None):
+
+def get_dir(info, create=False, root=None, add=None):
     code = info["code"]
     year = code[0:2]
     month = code[2:4]
@@ -96,12 +102,15 @@ def get_dir(info, create=False, root=None):
     if root:
         path = root
     path = join(path, year, month)
+    if add:
+        path = join(path, add)
 
     if not exists(path) and create:
         print("FLD : ", path)
         makedirs(path)
 
     return path
+
 
 # Configuration
 res_path = "resources"
@@ -117,8 +126,9 @@ for page in range(1, 104):
 
     for url in links:
         info = get_info(domain + url)
-        path = get_dir(info, create=True, root=dwn_path)
-        write_transcript(info, path)
-        download_audio(info, path)
+        tpath = get_dir(info, create=True, root=dwn_path, add="transcripts")
+        apath = get_dir(info, create=True, root=dwn_path, add="audio")
+        write_transcript(info, tpath)
+        download_audio(info, apath)
         #with open(last_path, "w") as file:
         #    file.write(info["code"].lower().replace(".", ""))

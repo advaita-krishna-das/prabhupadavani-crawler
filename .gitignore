@@ -90,3 +90,5 @@ ENV/
 
 # Lifetime files
 downloads
+.idea
+.DS_Store
